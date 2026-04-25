@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  bangla-ocr-api:
+    build: .
+    container_name: bangla-ocr-api
+    ports:
+      - '8000:8000'
+    volumes:
+      # Local code mount (data volume for persistent data)
+      - ./app:/app/app
+      - ./input:/app/input
+      - ./output:/app/output
+      - ./temp:/app/temp
+      # pip cache volume (for not downloading models again)
+      - pip_cache:/root/.cache/pip
+      - paddle_cache:/root/.paddleocr
+    environment:
+      - PYTHONUNBUFFERED=1
+      - TZ=Asia/Dhaka
+    restart: unless-stopped
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:8000/health']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+        reservations:
+          cpus: '1'
+          memory: 2G
+
+# GPU Server setup (NVIDIA Docker runtime)
+# runtime: nvidia
+# environment:
+#   - NVIDIA_VISIBLE_DEVICES=all
+
+volumes:
+  pip_cache:
+    driver: local
+  paddle_cache:
+    driver: local
