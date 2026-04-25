@@ -1,4 +1,4 @@
-app_backup/*
+app_backup/__pycache__/*
 input/*
 output/*
 temp/*
@@ -6,6 +6,3 @@ skills/*
 __pycache__/*
 
 app/__pycache__/*
-app/check_status.py
-app/main_old.py
-app/voter_ocr_old.py
