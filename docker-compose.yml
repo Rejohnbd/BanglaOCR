@@ -1,20 +1,24 @@
 version: '3.8'
 
 services:
-  bangla-ocr-api:
-    build: .
-    container_name: bangla-ocr-api
+
+  # ─────────────────────────────────────────
+  # EasyOCR Service  →  http://localhost:8000
+  # ─────────────────────────────────────────
+  bangla-easyocr-api:
+    build:
+      context: ./easyocr
+      dockerfile: Dockerfile
+    container_name: bangla-easyocr-api
     ports:
       - '8000:8000'
     volumes:
-      # Local code mount (data volume for persistent data)
-      - ./app:/app/app
-      - ./input:/app/input
-      - ./output:/app/output
-      - ./temp:/app/temp
-      # pip cache volume (for not downloading models again)
+      - ./easyocr/app:/app/app
+      - ./easyocr/input:/app/input
+      - ./easyocr/output:/app/output
+      - ./easyocr/temp:/app/temp
       - pip_cache:/root/.cache/pip
-      - paddle_cache:/root/.paddleocr
+      - easyocr_cache:/root/.EasyOCR
     environment:
       - PYTHONUNBUFFERED=1
       - TZ=Asia/Dhaka
@@ -34,13 +38,52 @@ services:
           cpus: '1'
           memory: 2G
 
-# GPU Server setup (NVIDIA Docker runtime)
-# runtime: nvidia
-# environment:
-#   - NVIDIA_VISIBLE_DEVICES=all
+  # ─────────────────────────────────────────
+  # PaddleOCR Service  →  http://localhost:8001
+  # ─────────────────────────────────────────
+  # bangla-paddleocr-api:
+  #   build:
+  #     context: ./paddleocr
+  #     dockerfile: Dockerfile
+  #   container_name: bangla-paddleocr-api
+  #   ports:
+  #     - '8001:8001'
+  #   volumes:
+  #     - ./paddleocr/app:/app/app
+  #     - ./paddleocr/input:/app/input
+  #     - ./paddleocr/output:/app/output
+  #     - ./paddleocr/temp:/app/temp
+  #     - pip_cache:/root/.cache/pip
+  #     - paddle_cache:/root/.paddleocr
+  #   environment:
+  #     - PYTHONUNBUFFERED=1
+  #     - TZ=Asia/Dhaka
+  #   restart: unless-stopped
+  #   healthcheck:
+  #     test: ['CMD', 'curl', '-f', 'http://localhost:8001/health']
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 3
+  #     start_period: 60s
+  #   deploy:
+  #     resources:
+  #       limits:
+  #         cpus: '2'
+  #         memory: 4G
+  #       reservations:
+  #         cpus: '1'
+  #         memory: 2G
+
+# GPU Server setup (uncomment for NVIDIA GPU)
+# Add under the service you want to enable GPU for:
+#   runtime: nvidia
+#   environment:
+#     - NVIDIA_VISIBLE_DEVICES=all
 
 volumes:
-  pip_cache:
+  pip_cache:         # shared pip download cache
     driver: local
-  paddle_cache:
+  easyocr_cache:     # EasyOCR model cache
     driver: local
+  # paddle_cache:      # PaddleOCR model cache
+  #   driver: local

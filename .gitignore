@@ -1,8 +1,43 @@
-app_backup/__pycache__/*
-input/*
-output/*
-temp/*
-skills/*
-__pycache__/*
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+*.so
 
-app/__pycache__/*
+# Virtual environments
+venv/
+.venv/
+env/
+.env
+
+# IDE
+.vscode/
+.idea/
+
+# Runtime directories (both services)
+easyocr/input/*
+easyocr/output/*
+easyocr/temp/*
+easyocr/app_backup/
+easyocr/skills/
+
+paddleocr/input/*
+paddleocr/output/*
+paddleocr/temp/*
+
+# Keep directory structure
+!easyocr/input/.gitkeep
+!easyocr/output/.gitkeep
+!easyocr/temp/.gitkeep
+!paddleocr/input/.gitkeep
+!paddleocr/output/.gitkeep
+!paddleocr/temp/.gitkeep
+
+# Logs and databases
+*.log
+*.db
+*.sqlite
