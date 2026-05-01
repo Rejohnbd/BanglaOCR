@@ -29,6 +29,10 @@ paddleocr/input/*
 paddleocr/output/*
 paddleocr/temp/*
 
+bkit/input/*
+bkit/output/*
+bkit/temp/*
+
 # Keep directory structure
 !easyocr/input/.gitkeep
 !easyocr/output/.gitkeep
@@ -36,6 +40,9 @@ paddleocr/temp/*
 !paddleocr/input/.gitkeep
 !paddleocr/output/.gitkeep
 !paddleocr/temp/.gitkeep
+!bkit/input/.gitkeep
+!bkit/output/.gitkeep
+!bkit/temp/.gitkeep
 
 # Logs and databases
 *.log

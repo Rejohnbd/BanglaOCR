@@ -76,6 +76,40 @@ services:
           cpus: '1'
           memory: 4G
 
+  # ─────────────────────────────────────────
+  # bKit Service  →  http://localhost:8002
+  # ─────────────────────────────────────────
+  bangla-bkit-api:
+    build:
+      context: ./bkit
+      dockerfile: Dockerfile
+    container_name: bangla-bkit-api
+    ports:
+      - '8002:8002'
+    volumes:
+      - ./bkit/app:/app/app
+      - ./bkit/input:/app/input
+      - ./bkit/output:/app/output
+      - ./bkit/temp:/app/temp
+    environment:
+      - PYTHONUNBUFFERED=1
+      - TZ=Asia/Dhaka
+    restart: unless-stopped
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:8002/health']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 1.8G
+
 # GPU Server setup (uncomment for NVIDIA GPU)
 # Add under the service you want to enable GPU for:
 #   runtime: nvidia
