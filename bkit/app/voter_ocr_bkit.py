@@ -1,4 +1,3 @@
-# bkit/app/voter_ocr_bkit.py - হাইব্রিড সমাধান (EasyOCR + bKit.transform + Custom Cleaner)
 import os
 import re
 import json
@@ -543,6 +542,57 @@ class VoterOCRProcessorBKit:
         data["fields"] = field_status
         
         return data
+    
+    def _has_text_fast(self, image_path: str) -> bool:
+        """
+        Very fast text detection using image analysis
+        No OCR needed - just checks if page is mostly white/empty
+        """
+        img = cv2.imread(image_path)
+        if img is None:
+            return True
+        
+        # Convert to grayscale
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        
+        # Calculate percentage of non-white pixels
+        _, thresh = cv2.threshold(gray, 250, 255, cv2.THRESH_BINARY_INV)
+        non_white_ratio = np.sum(thresh > 0) / (gray.shape[0] * gray.shape[1])
+        
+        # If less than 1% of pixels are non-white, page is likely empty
+        if non_white_ratio < 0.01:
+            return False
+        
+        # Also check if there are strong edges (text creates edges)
+        edges = cv2.Canny(gray, 50, 150)
+        edge_ratio = np.sum(edges > 0) / (edges.shape[0] * edges.shape[1])
+        
+        return edge_ratio > 0.005  # Small threshold
+
+    def _quick_text_check(self, image_path: str) -> bool:
+        """
+        Quick check using EasyOCR detection (without full recognition)
+        """
+        try:
+            result = self.easyocr_reader.readtext(image_path)
+            
+            if not result:
+                return False
+            
+            for detection in result:
+                if len(detection) >= 3:
+                    bbox, text, confidence = detection
+                else:
+                    bbox, text = detection
+                    confidence = 1.0
+                
+                if confidence > 0.3 and text and len(text.strip()) > 10:
+                    return True
+            
+            return False
+        except Exception as e:
+            print(f"[WARNING] Quick text check failed: {e}")
+            return True
 
     def process(self, progress_callback=None) -> List[Dict]:
         """Main processing pipeline with early page count notification"""
@@ -557,14 +607,14 @@ class VoterOCRProcessorBKit:
         print(f"PDF: {self.pdf_path}")
         print(f"Cleaner: {'bKit' if self.bkit_available else 'Custom'}")
         
-        # 🔥 Step 1: প্রথমে ইমেজ কনভার্ট করুন (total_pages জানার জন্য)
+        # Step 1: প্রথমে ইমেজ কনভার্ট করুন (total_pages জানার জন্য)
         image_paths = self.pdf_to_images(dpi=200)
         if not image_paths:
             return []
         
         total_pages = len(image_paths)
         
-        # 🔥 Step 2: প্রোগ্রেস কলব্যাক দিয়ে total_pages জানিয়ে দিন (স্টার্ট এ)
+        # Step 2: প্রোগ্রেস কলব্যাক দিয়ে total_pages জানিয়ে দিন (স্টার্ট এ)
         if progress_callback:
             progress_callback(
                 current_page=0,           # 0 পেজ, শুধু total_pages জানানোর জন্য
@@ -613,12 +663,12 @@ class VoterOCRProcessorBKit:
                             )
                         
                         name_preview = voter_data.get('name', 'Unknown')[:30]
-                        status_icon = "✅" if voter_data.get("status") else "⚠️"
-                        print(f"  {status_icon} Cell {cell_idx+1}: {name_preview}")
+                        status_icon = "" if voter_data.get("status") else ""
+                        print(f"{status_icon} Cell {cell_idx+1}: {name_preview}")
                 else:
-                    print(f"  ⚠️ Cell {cell_idx+1}: No text (len={len(cell_text) if cell_text else 0})")
+                    print(f"   Cell {cell_idx+1}: No text (len={len(cell_text) if cell_text else 0})")
             
-            print(f"📊 Page {page_num}: Extracted {len(page_voters)} voters")
+            print(f"Page {page_num}: Extracted {len(page_voters)} voters")
             all_voters.extend(page_voters)
             gc.collect()
         
@@ -629,7 +679,7 @@ class VoterOCRProcessorBKit:
         
         elapsed = (datetime.now() - start_time).total_seconds()
         print(f"\n{'='*60}")
-        print(f"✅ PROCESSING COMPLETED")
+        print(f" PROCESSING COMPLETED")
         print(f"{'='*60}")
         print(f"Total Pages: {total_pages}")
         print(f"Total Voters: {len(all_voters)}")
@@ -637,7 +687,7 @@ class VoterOCRProcessorBKit:
         print(f"Results: {out_path}")
         print(f"{'='*60}\n")
         
-        # 🔥 শেষ কলব্যাক (completed)
+        # শেষ কলব্যাক (completed)
         if progress_callback:
             progress_callback(
                 current_page=total_pages, 
@@ -647,3 +697,102 @@ class VoterOCRProcessorBKit:
             )
         
         return all_voters
+
+
+    # def process(self, progress_callback=None) -> List[Dict]:
+    #     """Main processing pipeline with hybrid text detection"""
+    #     if self.easyocr_reader is None:
+    #         print("[ERROR] No OCR engine available!")
+    #         return []
+        
+    #     start_time = datetime.now()
+    #     print(f"\n{'='*60}")
+    #     print(f"[PROCESS] BANGLA VOTER OCR - Hybrid Engine")
+    #     print(f"{'='*60}")
+    #     print(f"PDF: {self.pdf_path}")
+        
+    #     image_paths = self.pdf_to_images(dpi=200)
+    #     if not image_paths:
+    #         return []
+        
+    #     total_pages = len(image_paths)
+        
+    #     if progress_callback:
+    #         progress_callback(current_page=0, total_pages=total_pages, status="processing", count=0)
+        
+    #     all_voters = []
+        
+    #     for idx, img_path in enumerate(image_paths):
+    #         page_num = idx + 1
+    #         print(f"\n[PAGE {page_num}/{total_pages}] Processing...")
+            
+    #         # ফাস্ট চেক 1: পিক্সেল ভিত্তিক
+    #         if not self._has_text_fast(img_path):
+    #             print(f"Page {page_num}: Empty (no dark pixels), skipping...")
+    #             if progress_callback:
+    #                 progress_callback(current_page=page_num, total_pages=total_pages, 
+    #                                 status="processing", count=len(all_voters))
+    #             continue
+            
+    #         # ফাস্ট চেক 2: OCR ভিত্তিক (যদি প্রয়োজন হয়)
+    #         if not self._quick_text_check(img_path):
+    #             print(f"Page {page_num}: No readable text, skipping...")
+    #             if progress_callback:
+    #                 progress_callback(current_page=page_num, total_pages=total_pages, 
+    #                                 status="processing", count=len(all_voters))
+    #             continue
+            
+    #         if progress_callback:
+    #             progress_callback(current_page=page_num, total_pages=total_pages, 
+    #                             status="processing", count=len(all_voters))
+            
+    #         # এখন গ্রিড ডিটেক্ট করুন
+    #         cells = self.detect_grid_cells(img_path, page_num)
+            
+    #         if not cells:
+    #             print(f"   Page {page_num}: No cells detected")
+    #             continue
+            
+    #         page_voters = []
+    #         for cell_idx, cell_bbox in enumerate(cells):
+    #             cell_text = self.extract_cell_text(img_path, cell_bbox)
+                
+    #             if cell_text and len(cell_text.strip()) > 30:
+    #                 voter_data = self.parse_voter_card(cell_text)
+    #                 if voter_data.get("name") or voter_data.get("voter_no"):
+    #                     voter_data["_source_page"] = page_num
+    #                     voter_data["_source_cell"] = cell_idx + 1
+    #                     page_voters.append(voter_data)
+                        
+    #                     if progress_callback:
+    #                         progress_callback(current_page=page_num, total_pages=total_pages, 
+    #                                         status="processing", count=len(all_voters) + len(page_voters))
+                        
+    #                     name_preview = voter_data.get('name', 'Unknown')[:30]
+    #                     status_icon = "" if voter_data.get("status") else ""
+    #                     print(f"  {status_icon} Cell {cell_idx+1}: {name_preview}")
+            
+    #         print(f"Page {page_num}: Extracted {len(page_voters)} voters")
+    #         all_voters.extend(page_voters)
+    #         gc.collect()
+        
+    #     # Save results
+    #     out_path = os.path.join(self.output_dir, "voters.json")
+    #     with open(out_path, "w", encoding="utf-8") as f:
+    #         json.dump(all_voters, f, ensure_ascii=False, indent=2)
+        
+    #     elapsed = (datetime.now() - start_time).total_seconds()
+    #     print(f"\n{'='*60}")
+    #     print(f" PROCESSING COMPLETED")
+    #     print(f"{'='*60}")
+    #     print(f"Total Pages: {total_pages}")
+    #     print(f"Total Voters: {len(all_voters)}")
+    #     print(f"Time: {elapsed:.2f}s")
+    #     print(f"Results: {out_path}")
+    #     print(f"{'='*60}\n")
+        
+    #     if progress_callback:
+    #         progress_callback(current_page=total_pages, total_pages=total_pages, 
+    #                         status="completed", count=len(all_voters))
+        
+    #     return all_voters
