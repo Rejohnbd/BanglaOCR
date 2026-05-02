@@ -48,3 +48,8 @@ bkit/temp/*
 *.log
 *.db
 *.sqlite
+
+voter-app/node_modules/*
+voter-app/dist/*
+voter-app/.turbo/*
+voter-app/.next
