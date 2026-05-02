@@ -33,6 +33,10 @@ bkit/input/*
 bkit/output/*
 bkit/temp/*
 
+passport/input/*
+passport/output/*
+passport/temp/*
+
 # Keep directory structure
 !easyocr/input/.gitkeep
 !easyocr/output/.gitkeep
@@ -43,6 +47,9 @@ bkit/temp/*
 !bkit/input/.gitkeep
 !bkit/output/.gitkeep
 !bkit/temp/.gitkeep
+!passport/input/.gitkeep
+!passport/output/.gitkeep
+!passport/temp/.gitkeep
 
 # Logs and databases
 *.log

@@ -104,11 +104,38 @@ services:
     deploy:
       resources:
         limits:
+          cpus: '2'
+          memory: 4G
+        reservations:
+          cpus: '1'
+          memory: 2G
+
+  # ─────────────────────────────────────────
+  # passport-ocr Service  →  http://localhost:8002
+  # ─────────────────────────────────────────
+  passport-ocr-api:
+    build:
+      context: ./passport
+      dockerfile: Dockerfile
+    container_name: passport-ocr-api
+    ports:
+      - '8003:8003'
+    volumes:
+      - ./passport/app:/app/app
+      - ./passport/output:/app/output
+      - ./passport/temp:/app/temp
+    environment:
+      - PYTHONUNBUFFERED=1
+      - TZ=Asia/Dhaka
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
           cpus: '1'
           memory: 2G
         reservations:
           cpus: '0.5'
-          memory: 1.8G
+          memory: 1G
 
 # GPU Server setup (uncomment for NVIDIA GPU)
 # Add under the service you want to enable GPU for:
@@ -122,4 +149,8 @@ volumes:
   easyocr_cache: # EasyOCR model cache
     driver: local
   paddle_cache: # PaddleOCR model cache
+    driver: local
+  bkit_cache: # bkit model cache
+    driver: local
+  passport_cache: # passport-ocr model cache
     driver: local
